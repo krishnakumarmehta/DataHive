@@ -19,6 +19,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [customBusinessType, setCustomBusinessType] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -87,6 +88,10 @@ const Register = () => {
         setError('Please fill in business name and type');
         return false;
       }
+      if (formData.businessType === 'Other' && !customBusinessType.trim()) {
+        setError('Please specify your business type');
+        return false;
+      }
     }
     return true;
   };
@@ -109,7 +114,13 @@ const Register = () => {
     setError('');
 
     try {
-      const result = await register(formData);
+      const finalData = {
+        ...formData,
+        businessType: formData.businessType === 'Other'
+          ? (customBusinessType.trim() || 'Other')
+          : formData.businessType,
+      };
+      const result = await register(finalData);
       if (result.success) {
         navigate('/dashboard');
       } else {
@@ -224,12 +235,32 @@ const Register = () => {
                 <div className="input-group">
                   <label htmlFor="reg-btype">Business Category *</label>
                   <select id="reg-btype" className="select" value={formData.businessType}
-                    onChange={(e) => updateField('businessType', e.target.value)} required>
+                    onChange={(e) => {
+                      updateField('businessType', e.target.value);
+                      if (e.target.value !== 'Other') setCustomBusinessType('');
+                    }} required>
                     <option value="">Select category</option>
                     {businessCategories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
+
+                  {/* Custom type input — slides in when Other is selected */}
+                  {formData.businessType === 'Other' && (
+                    <div className="other-type-input animate-fade-in">
+                      <Briefcase size={17} className="input-icon" />
+                      <input
+                        id="reg-btype-custom"
+                        type="text"
+                        className="input"
+                        placeholder="e.g. Handicrafts, Jewellery, Printing..."
+                        value={customBusinessType}
+                        onChange={(e) => setCustomBusinessType(e.target.value)}
+                        autoFocus
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="input-group">

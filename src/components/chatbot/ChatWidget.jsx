@@ -6,11 +6,11 @@ import { Bot, X, Send, Sparkles, RotateCcw } from 'lucide-react';
 import './ChatWidget.css';
 
 const QUICK_PROMPTS = [
-  'Business ka summary batao',
-  'Kitne products hain?',
-  'Pending orders dikhao',
-  'Top customers kaun hain?',
-  'Is mahine ki sales?',
+  'Give me a business summary',
+  'How many products do I have?',
+  'Show pending orders',
+  'Who are my top customers?',
+  'This month\'s sales?',
   'Out of stock products',
 ];
 
@@ -206,7 +206,7 @@ const ChatWidget = () => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Kisi customer/product ka naam ya koi bhi sawal..."
+              placeholder="Ask about any customer, product, order or sales..."
               className="chat-input"
               id="chat-input"
             />

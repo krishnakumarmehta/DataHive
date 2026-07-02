@@ -28,17 +28,32 @@ export const BusinessProvider = ({ children }) => {
       const savedDocuments = localStorage.getItem(`datahive_${userId}_documents`);
       const savedActivities = localStorage.getItem(`datahive_${userId}_activities`);
 
-      if (userId === 'demo-001') {
-        setProducts(savedProducts ? JSON.parse(savedProducts) : mockProducts);
-        setOrders(savedOrders ? JSON.parse(savedOrders) : mockOrders);
-        setCustomers(savedCustomers ? JSON.parse(savedCustomers) : mockCustomers);
-        setDocuments(savedDocuments ? JSON.parse(savedDocuments) : mockDocuments);
-        setActivities(savedActivities ? JSON.parse(savedActivities) : mockActivities);
+      if (userId === 'demo-001' || userId === 'admin-001') {
+        const seededKey = `datahive_${userId}_seeded`;
+        const isSeeded = localStorage.getItem(seededKey);
+
+        if (!isSeeded) {
+          setProducts(mockProducts);
+          setOrders(mockOrders);
+          setCustomers(mockCustomers);
+          setDocuments(mockDocuments);
+          setActivities(mockActivities);
+          setSalesData(mockSalesData);
+          localStorage.setItem(seededKey, 'true');
+        } else {
+          setProducts(savedProducts ? JSON.parse(savedProducts) : mockProducts);
+          setOrders(savedOrders ? JSON.parse(savedOrders) : mockOrders);
+          setCustomers(savedCustomers ? JSON.parse(savedCustomers) : mockCustomers);
+          setDocuments(savedDocuments ? JSON.parse(savedDocuments) : mockDocuments);
+          setActivities(savedActivities ? JSON.parse(savedActivities) : mockActivities);
+          setSalesData(mockSalesData);
+        }
       } else {
         setProducts(savedProducts ? JSON.parse(savedProducts) : []);
         setOrders(savedOrders ? JSON.parse(savedOrders) : []);
         setCustomers(savedCustomers ? JSON.parse(savedCustomers) : []);
         setActivities(savedActivities ? JSON.parse(savedActivities) : []);
+        setSalesData([]);
         
         if (savedDocuments) {
           setDocuments(JSON.parse(savedDocuments));
@@ -57,11 +72,11 @@ export const BusinessProvider = ({ children }) => {
           setDocuments([]);
         }
       }
-      setSalesData(mockSalesData);
     } else {
       setProducts([]);
       setOrders([]);
       setCustomers([]);
+      setSalesData([]);
       setDocuments([]);
       setActivities([]);
     }

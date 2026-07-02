@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../utils/supabaseClient';
 
 const AuthContext = createContext(null);
 
@@ -9,193 +8,141 @@ export const useAuth = () => {
   return context;
 };
 
-const mapSupabaseUser = (sbUser) => {
-  if (!sbUser) return null;
-  const metadata = sbUser.user_metadata || {};
-  return {
-    id: sbUser.id,
-    email: sbUser.email,
-    name: metadata.name || '',
-    businessName: metadata.businessName || '',
-    businessType: metadata.businessType || '',
-    phone: metadata.phone || '',
-    city: metadata.city || '',
-    website: metadata.website || '',
-    description: metadata.description || '',
-    gstNumber: metadata.gstNumber || '',
-    apiKey: metadata.apiKey || '',
-    documents: metadata.documents || [],
-    createdAt: sbUser.created_at,
-  };
-};
+// ── Helpers ──────────────────────────────────────────────
+const USERS_KEY = 'datahive_local_users';
+const SESSION_KEY = 'datahive_user';
 
+const getLocalUsers = () => JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+const saveLocalUsers = (users) => localStorage.setItem(USERS_KEY, JSON.stringify(users));
+const getSession = () => {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+};
+const saveSession = (user) => localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+const clearSession = () => localStorage.removeItem(SESSION_KEY);
+
+// ── Provider ─────────────────────────────────────────────
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Restore session on mount
   useEffect(() => {
-    // 1. Check if demo user is stored locally
-    const savedUser = localStorage.getItem('datahive_user');
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser);
-      if (parsed.id === 'demo-001') {
-        setUser(parsed);
-        setLoading(false);
-        return;
-      }
-    }
-
-    // 2. Otherwise check active Supabase session
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (session && session.user) {
-          setUser(mapSupabaseUser(session.user));
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error('Error fetching session:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // 3. Listen to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const currentSaved = localStorage.getItem('datahive_user');
-      const isDemo = currentSaved && JSON.parse(currentSaved).id === 'demo-001';
-
-      if (isDemo && event !== 'SIGNED_OUT') {
-        setUser(mapSupabaseUser(session?.user));
-        localStorage.removeItem('datahive_user');
-      } else if (!isDemo) {
-        if (session && session.user) {
-          setUser(mapSupabaseUser(session.user));
-        } else {
-          setUser(null);
-        }
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    const saved = getSession();
+    if (saved) setUser(saved);
+    setLoading(false);
   }, []);
 
+  // ── Login ─────────────────────────────────────────────
   const login = async (email, password) => {
-    // Demo login fallback
-    if (email === 'demo@datahive.com' && password === 'demo123') {
-      const demoUser = {
-        id: 'demo-001',
-        name: 'Rajesh Kumar',
-        email: 'demo@datahive.com',
-        businessName: 'Kumar Electronics',
-        businessType: 'Retail & E-Commerce',
-        phone: '+91 99876 54321',
-        city: 'Mumbai',
-        website: 'www.kumarelectronics.com',
+    // Built-in admin / demo account
+    if (email === '0krishnakumarmehta@gmail.com' && password === 'Krishna@123') {
+      const adminUser = {
+        id: 'admin-001',
+        name: 'Krishna Kumar Mehta',
+        email: '0krishnakumarmehta@gmail.com',
+        businessName: 'DataHive Business',
+        businessType: 'Business Intelligence',
+        phone: '',
+        city: '',
+        website: '',
         apiKey: '',
         documents: [],
+        createdAt: new Date().toISOString(),
       };
-      setUser(demoUser);
-      localStorage.setItem('datahive_user', JSON.stringify(demoUser));
+      setUser(adminUser);
+      saveSession(adminUser);
       return { success: true };
     }
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    // Check locally registered users
+    const users = getLocalUsers();
+    const match = users.find(u => u.email === email);
 
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      setUser(mapSupabaseUser(data.user));
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message || 'Login failed' };
+    if (!match) {
+      return { success: false, error: 'No account found with this email. Please register first.' };
     }
+    if (match.password !== password) {
+      return { success: false, error: 'Incorrect password. Please try again.' };
+    }
+
+    // Login successful
+    const sessionUser = { ...match };
+    delete sessionUser.password;
+    setUser(sessionUser);
+    saveSession(sessionUser);
+    return { success: true };
   };
 
+  // ── Register ──────────────────────────────────────────
   const register = async (userData) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name,
-            businessName: userData.businessName,
-            businessType: userData.businessType,
-            phone: userData.phone || '',
-            city: userData.city || '',
-            website: userData.website || '',
-            description: userData.description || '',
-            gstNumber: userData.gstNumber || '',
-            documents: userData.documents || [],
-          }
-        }
-      });
+    const users = getLocalUsers();
 
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      setUser(mapSupabaseUser(data.user));
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.message || 'Registration failed' };
+    // Check for duplicate email
+    const exists = users.find(u => u.email === userData.email);
+    if (exists) {
+      return { success: false, error: 'An account with this email already exists. Please login.' };
     }
+
+    // Basic validation
+    if (!userData.email || !userData.password) {
+      return { success: false, error: 'Email and password are required.' };
+    }
+
+    const newUser = {
+      id: 'user-' + Date.now(),
+      name: userData.name || '',
+      email: userData.email,
+      password: userData.password,
+      businessName: userData.businessName || '',
+      businessType: userData.businessType || '',
+      phone: userData.phone || '',
+      city: userData.city || '',
+      website: userData.website || '',
+      description: userData.description || '',
+      gstNumber: userData.gstNumber || '',
+      apiKey: '',
+      documents: userData.documents || [],
+      createdAt: new Date().toISOString(),
+    };
+
+    users.push(newUser);
+    saveLocalUsers(users);
+
+    // Log user in immediately after registration
+    const sessionUser = { ...newUser };
+    delete sessionUser.password;
+    setUser(sessionUser);
+    saveSession(sessionUser);
+
+    return { success: true };
   };
 
+  // ── Logout ────────────────────────────────────────────
   const logout = async () => {
-    const currentSaved = localStorage.getItem('datahive_user');
-    const isDemo = currentSaved && JSON.parse(currentSaved).id === 'demo-001';
-
     setUser(null);
-    localStorage.removeItem('datahive_user');
-
-    if (!isDemo) {
-      await supabase.auth.signOut();
-    }
+    clearSession();
   };
 
+  // ── Update Profile ────────────────────────────────────
   const updateProfile = async (updates) => {
-    const currentSaved = localStorage.getItem('datahive_user');
-    const isDemo = currentSaved && JSON.parse(currentSaved).id === 'demo-001';
-
-    if (isDemo) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('datahive_user', JSON.stringify(updatedUser));
-      return { success: true };
-    }
-
     try {
-      const { data, error } = await supabase.auth.updateUser({
-        data: {
-          name: updates.name,
-          businessName: updates.businessName,
-          businessType: updates.businessType,
-          phone: updates.phone,
-          city: updates.city,
-          website: updates.website,
-          description: updates.description,
-          gstNumber: updates.gstNumber,
-          apiKey: updates.apiKey,
-        }
-      });
+      const currentUser = getSession();
+      if (!currentUser) return { success: false, error: 'Not logged in.' };
 
-      if (error) {
-        return { success: false, error: error.message };
+      const updatedUser = { ...currentUser, ...updates };
+      setUser(updatedUser);
+      saveSession(updatedUser);
+
+      // Also update in the users list (if not admin)
+      if (!currentUser.id.startsWith('admin-')) {
+        const users = getLocalUsers();
+        const idx = users.findIndex(u => u.id === currentUser.id);
+        if (idx !== -1) {
+          users[idx] = { ...users[idx], ...updates };
+          saveLocalUsers(users);
+        }
       }
 
-      setUser(mapSupabaseUser(data.user));
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message || 'Update failed' };
@@ -208,4 +155,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

@@ -69,6 +69,15 @@ const Sales = () => {
         </div>
       </div>
 
+      {/* Empty state for new users */}
+      {salesData.length === 0 && orders.length === 0 && (
+        <div className="empty-state" style={{ marginBottom: '24px' }}>
+          <TrendingUp size={48} style={{ color: 'var(--primary-400)', marginBottom: '16px' }} />
+          <h3>No sales data yet</h3>
+          <p>Start adding orders and products to see your analytics here.</p>
+        </div>
+      )}
+
       {/* Sales Stats */}
       <div className="sales-stats-grid">
         <div className="sales-stat-card card-glass">

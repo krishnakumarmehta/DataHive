@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useBusiness } from '../../context/BusinessContext';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, TrendingUp,
   FileText, Settings, LogOut, Bot, X, Hexagon
@@ -18,7 +19,10 @@ const navItems = [
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
+  const { orders } = useBusiness();
   const location = useLocation();
+
+  const pendingOrdersCount = orders.filter(o => o.status === 'pending' || o.status === 'processing').length;
 
   return (
     <>
@@ -60,8 +64,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             >
               <item.icon size={20} />
               <span>{item.label}</span>
-              {item.path === '/orders' && (
-                <span className="nav-badge">3</span>
+              {item.path === '/orders' && pendingOrdersCount > 0 && (
+                <span className="nav-badge">{pendingOrdersCount}</span>
               )}
             </NavLink>
           ))}

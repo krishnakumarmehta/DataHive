@@ -7,32 +7,35 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import './Dashboard.css';
+import './Pages.css';
 
 const Dashboard = () => {
   const { products, orders, customers, salesData, activities, getStats } = useBusiness();
   const stats = getStats();
 
+  const isNewUser = salesData.length === 0 && orders.length === 0 && products.length === 0;
+
   const statCards = [
     {
       label: 'Total Revenue',
       value: formatCurrency(stats.totalRevenue),
-      change: '+12.5%',
-      trend: 'up',
+      change: isNewUser ? 'No orders yet' : '+12.5%',
+      trend: isNewUser ? 'neutral' : 'up',
       icon: IndianRupee,
       gradient: 'stat-gradient-1',
     },
     {
       label: 'Total Orders',
       value: stats.totalOrders,
-      change: '+8.2%',
-      trend: 'up',
+      change: isNewUser ? 'No orders yet' : '+8.2%',
+      trend: isNewUser ? 'neutral' : 'up',
       icon: ShoppingCart,
       gradient: 'stat-gradient-2',
     },
     {
       label: 'Total Products',
       value: stats.totalProducts,
-      change: `${stats.activeProducts} active`,
+      change: isNewUser ? 'Add your first product' : `${stats.activeProducts} active`,
       trend: 'neutral',
       icon: Package,
       gradient: 'stat-gradient-3',
@@ -40,8 +43,8 @@ const Dashboard = () => {
     {
       label: 'Total Customers',
       value: stats.totalCustomers,
-      change: '+3 this month',
-      trend: 'up',
+      change: isNewUser ? 'No customers yet' : '+3 this month',
+      trend: isNewUser ? 'neutral' : 'up',
       icon: Users,
       gradient: 'stat-gradient-4',
     },
@@ -111,50 +114,64 @@ const Dashboard = () => {
             <span className="badge badge-primary">Last 6 months</span>
           </div>
           <div className="chart-container">
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={salesData}>
-                <defs>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.1)" />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} tickFormatter={(v) => `₹${v/1000}k`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#revenueGradient)" strokeWidth={2} name="Revenue" />
-                <Area type="monotone" dataKey="profit" stroke="#a855f7" fill="url(#profitGradient)" strokeWidth={2} name="Profit" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {salesData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={salesData}>
+                  <defs>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.1)" />
+                  <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#64748b" fontSize={12} tickFormatter={(v) => `₹${v/1000}k`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#revenueGradient)" strokeWidth={2} name="Revenue" />
+                  <Area type="monotone" dataKey="profit" stroke="#a855f7" fill="url(#profitGradient)" strokeWidth={2} name="Profit" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="empty-state" style={{ height: 280 }}>
+                <TrendingUp size={36} style={{ color: 'var(--primary-400)' }} />
+                <p>No revenue data yet.<br/>Add orders to see your chart.</p>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="chart-card card animate-fade-in-up stagger-2">
           <div className="chart-header">
             <h3>Orders by Month</h3>
-            <span className="badge badge-success">Growing</span>
+            <span className="badge badge-success">{isNewUser ? 'No data' : 'Growing'}</span>
           </div>
           <div className="chart-container">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.1)" />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="orders" fill="url(#barGradient)" radius={[6, 6, 0, 0]} name="orders" />
-                <defs>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </BarChart>
-            </ResponsiveContainer>
+            {salesData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.1)" />
+                  <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#64748b" fontSize={12} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="orders" fill="url(#barGradient)" radius={[6, 6, 0, 0]} name="orders" />
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" />
+                      <stop offset="100%" stopColor="#a855f7" />
+                    </linearGradient>
+                  </defs>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="empty-state" style={{ height: 280 }}>
+                <ShoppingCart size={36} style={{ color: 'var(--primary-400)' }} />
+                <p>No orders yet.<br/>Start by adding your first order.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -168,7 +185,7 @@ const Dashboard = () => {
             <span className="badge badge-primary">{orders.length} total</span>
           </div>
           <div className="recent-orders">
-            {orders.slice(0, 5).map((order) => (
+            {orders.length > 0 ? orders.slice(0, 5).map((order) => (
               <div key={order.id} className="recent-order-item">
                 <div className="order-item-left">
                   <span className="order-id">{order.id}</span>
@@ -181,7 +198,12 @@ const Dashboard = () => {
                   </span>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="empty-state" style={{ padding: '32px 0' }}>
+                <ShoppingCart size={32} style={{ color: 'var(--text-muted)' }} />
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No orders yet. Add your first order!</p>
+              </div>
+            )}
           </div>
         </div>
 

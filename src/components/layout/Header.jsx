@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Menu, Bell, Search } from 'lucide-react';
 import './Header.css';
@@ -15,6 +15,7 @@ const pageTitles = {
 
 const Header = ({ onMenuClick }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const title = pageTitles[location.pathname] || 'Dashboard';
 
@@ -46,7 +47,19 @@ const Header = ({ onMenuClick }) => {
           <Bell size={20} />
           <span className="notification-dot"></span>
         </button>
-        <div className="header-avatar" id="user-avatar">
+        <div 
+          className="header-avatar" 
+          id="user-avatar"
+          onClick={() => navigate('/settings')}
+          title="Profile Settings"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              navigate('/settings');
+            }
+          }}
+        >
           {user?.name?.charAt(0) || 'U'}
         </div>
       </div>
